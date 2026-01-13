@@ -1,8 +1,13 @@
+import { Link, useSearchParams } from "react-router-dom";
+
 export function PaymentSuccess() {
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get("session_id"); // from Stripe Checkout
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg">
-        {/* Tick Icon */}
+    <main className="min-h-screen flex items-center justify-center bg-gray-50">
+      <section className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg">
+        {/* Success Icon */}
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -30,14 +35,23 @@ export function PaymentSuccess() {
           successfully.
         </p>
 
-        {/* Action Button */}
-        <button
-          className="mt-6 w-full rounded-lg bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700 transition"
-          onClick={() => window.location.href = "/"}
-        >
-          Go to Dashboard
-        </button>
-      </div>
-    </div>
-  )
+        {/* CTA */}
+        <div className="mt-6">
+          <Link
+            to="/"
+            className="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700 transition"
+          >
+            Go to Dashboard
+          </Link>
+        </div>
+
+        {/* Optional: Stripe Reference */}
+        {sessionId && (
+          <p className="mt-4 text-xs text-gray-400">
+            Reference: {sessionId}
+          </p>
+        )}
+      </section>
+    </main>
+  );
 }

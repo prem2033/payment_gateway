@@ -23,12 +23,13 @@ app.get("/", (req, res) => {
 
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
+/* Checkout Session : it will used to poupulate the checkout session for payment*/
 app.post('/checkout-session2', async (req, res) => {
   console.log('checkout-session2 has started', req.body)
   const { name, email, unit, amount } = req.body;
   // await delay(10000);
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ['card', "amazon_pay", 'paypal'],
+    payment_method_types: ['card'],
     line_items: [
       {
         price_data: {
@@ -40,58 +41,22 @@ app.post('/checkout-session2', async (req, res) => {
           },
         },
         quantity: 1,
-        metadata: {
-          email: email || 'test@gmail.com',
-          currency: "GBR"
-        }
       }
     ],
+    metadata: {
+      email: email || 'test@gmail.com',
+      currency: "GBR"
+    },
     mode: 'payment',
     success_url: `${process.env.HOST}:${process.env.UI_PORT}/success`,
     cancel_url: `${process.env.HOST}:${process.env.UI_PORT}/cancel`,
   });
 
   console.log('SESSION', session.url)
-  // res.redirect(303, session.url);
   res.send({ url: session.url });
 });
 
-// it will save card to stripe account
-app.post("/create-payment-intent", async (req, res) => {
-  console.log('initating payment intent');
-  try {
-    const { email } = req.body;
-
-    // Create customer
-    const customer = await stripe.customers.create({
-      email: `${uuidv4}_${email}`,
-    });
-
-    console.log('CUSTOMER CREATED', customer)
-    // Small verification charge (£1)
-    const paymentIntent = await stripe.paymentIntents.create({
-      // payment_method_types: ["card"],
-      amount: 100, // £1.00
-      currency: "gbp",
-      customer: customer.id,
-      setup_future_usage: "off_session", // save card
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      description: "Card Verificagion charge"
-    });
-    console.log('PAYMENT INTENET', paymentIntent);
-
-    res.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntent: paymentIntent.id,
-      customerId: customer.id
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
+/** REFUND PAYMENT */
 app.post("/refund-payment", async (req, res) => {
   try {
     const { paymentIntentId } = req.body;
@@ -123,31 +88,13 @@ app.post("/pre-auth-amount", async (req, res) => {
       payment_method_types: ["card"],
     });
 
+    // stripe.confirmCardPayment(clientSecret, {
+    //   payment_method: { card }
+    // });
     console.log('Create PaymmetIntent', paymentIntent);
     res.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/create-customer", async (req, res) => {
-  console.log('Creating customer...', req.body)
-  try {
-    const { email, name, metadata } = req.body;
-
-    const customer = await stripe.customers.create({
-      email,
-      name,
-    });
-
-    console.log('Returing Response', {
-      customerId: customer.id
-    })
-    res.json({
-      customerId: customer.id
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -165,7 +112,7 @@ app.post("/payment-pre-auth", async (req, res) => {
 
     const paymentIntent = await stripe.paymentIntents.capture(
       paymentIntentId,
-      amountToCapture ? { amount_to_capture: amountToCapture } : {}
+      { amountToCapture }
     );
 
     res.json(paymentIntent);
@@ -189,6 +136,42 @@ app.post("/release-pre-auth", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/** CREATE CUSTOMER */
+app.post("/create-customer", async (req, res) => {
+  console.log('Creating customer...', req.body)
+  try {
+    const { email, name, metadata } = req.body;
+
+    const customer = await stripe.customers.create({
+      email,
+      name,
+    });
+
+    console.log('Returing Response', {
+      customerId: customer.id
+    })
+    res.json({
+      customerId: customer.id
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+/** save card */
+app.post("/create-setup-intent", async (req, res) => {
+  const { customerId } = req.body;
+
+  const setupIntent = await stripe.setupIntents.create({
+    customer: customerId,
+    payment_method_types: ["card"],
+  });
+
+  res.json({ clientSecret: setupIntent.client_secret });
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
