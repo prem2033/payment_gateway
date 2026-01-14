@@ -2,8 +2,7 @@ import express, { json } from "express";
 import Stripe from "stripe";
 import dotenv from "dotenv";
 import cors from 'cors'
-import { v4 as uuidv4 } from "uuid";
-
+import { getUser } from "./data/user.js";
 dotenv.config();
 
 //create strip object
@@ -21,14 +20,32 @@ app.get("/", (req, res) => {
   res.send("Stripe Express API is running 🚀");
 });
 
+app.get("/healthcheck", (req, res) => {
+  console.log("Health check endpoint hit");
+  res.status(200).send({ status: "OK", timestamp: new Date()});
+});
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 /* Checkout Session : it will used to poupulate the checkout session for payment*/
-app.post('/checkout-session2', async (req, res) => {
-  console.log('checkout-session2 has started', req.body)
-  const { name, email, unit, amount } = req.body;
+app.post('/checkout-session', async (req, res) => {
+  console.log('checkout-session has started', req.body)
+  const { name, email, unit, amount, customerId } = req.body;
+  if(!customerId){
+    return  res.status(400).json({ error: "customerId is required" });
+  }
+  if(!amount || !unit){
+    return  res.status(400).json({ error: "amount and unit are required" });
+  }
+  if(!email){
+    return  res.status(400).json({ error: "email is required" });
+  }
+  if(!name){
+    return  res.status(400).json({ error: "name is required" });
+  }
+  console.log('Creating checkout session for:', { name, email, unit, amount, customerId });
   // await delay(10000);
   const session = await stripe.checkout.sessions.create({
+    customer: customerId,
     payment_method_types: ['card'],
     line_items: [
       {
@@ -137,12 +154,24 @@ app.post("/release-pre-auth", async (req, res) => {
   }
 });
 
-/** CREATE CUSTOMER */
-app.post("/create-customer", async (req, res) => {
-  console.log('Creating customer...', req.body)
+/*--------------------------CREATE CUSTOMER-----------------------------------*/
+/** CREATE/Get Customer CUSTOMER */
+app.post("/get-customer", async (req, res) => {
+  console.log('Vaidating customer...', req.body.email)
   try {
-    const { email, name, metadata } = req.body;
+    const { email, name } = req.body;
+    console.log('Checking existing customer for email:', email)
+    const user = getUser(email);
+    if (user) {
+      console.log('Customer already exists', {
+        customerId: user.customerId
+      })
+      return res.json({
+        customerId: user.customerId
+      });
+    }
 
+    console.log('Creating new customer for email:', email)
     const customer = await stripe.customers.create({
       email,
       name,
@@ -151,7 +180,7 @@ app.post("/create-customer", async (req, res) => {
     console.log('Returing Response', {
       customerId: customer.id
     })
-    res.json({
+    return res.json({
       customerId: customer.id
     });
   } catch (err) {
@@ -170,6 +199,36 @@ app.post("/create-setup-intent", async (req, res) => {
   });
 
   res.json({ clientSecret: setupIntent.client_secret });
+});
+
+/** A Customer Session authorizes client-side Stripe SDKs to read and 
+ * act on a customer’s saved payment methods and related data. 
+*/
+app.post("/customer-session", async (req, res) => {
+  console.log('customer-session has started', req.body)
+  const { customerId } = req.body;
+  if (!customerId) {
+    return res.status(400).json({ error: "customerId is required" });
+  }
+  const customerSession = await stripe.customerSessions.create({
+    customer: customerId,
+    components: {
+      pricing_table: {
+        enabled: true,
+      },
+    },
+  });
+  console.log('Customer Session', customerSession)
+  res.json({
+    customerSessionId: customerSession.id,
+    clientSecret: customerSession.client_secret
+  });
+});
+
+/* ------------------ GLOBAL ERROR HANDLER ------------------ */
+app.use((err, _req, res, _next) => {
+  console.error("Unhandled error:", err.message);
+  res.status(500).json({ error: "Internal server error" });
 });
 
 

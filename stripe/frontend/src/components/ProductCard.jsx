@@ -1,15 +1,20 @@
 import axios from "axios";
+import { UserContext } from "../App";
+import { useContext } from "react";
 
 export function ProductCard({ id, name, price, unit }) {
+  const { user, setUser } = useContext(UserContext);
+  console.log("Current User in ProductCard:", user);
   const handlePayment = async () => {
     console.log("Initiating payment for:", { id, name, price, unit });
     const response = await axios.post(
-      "http://localhost:3000/checkout-session2",
+      "http://localhost:3000/checkout-session",
       {
-        name: name,
-        email: "user@example.com",
+        name: user.name,
+        email: user.email,
         unit: unit,
         amount: price,
+        customerId: user.customerId,
       }
     );
     console.log("Payment response:", response.data);

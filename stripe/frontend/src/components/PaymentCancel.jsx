@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export function PaymentCancel() {
+  const { state } = useLocation();
+  const message = state?.message || "Your payment was cancelled. No charges were made to your card.";
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50">
       <section
@@ -12,7 +15,7 @@ export function PaymentCancel() {
         </h1>
 
         <p className="text-gray-600 mb-6">
-          Your payment was cancelled. No charges were made to your card.
+          {message}
         </p>
 
         <div className="flex justify-center gap-4">

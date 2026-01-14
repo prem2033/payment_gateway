@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { PreAuthCard } from "./PreAuthCard";
+import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { UserContext } from "../App";
 
 export default function Pricing() {
+  const { user, setUser } = useContext(UserContext);
   const navigate = useNavigate();
   const [billing, setBilling] = useState("monthly");
   const choosePlan = (plan) => {
@@ -10,9 +11,10 @@ export default function Pricing() {
     navigate("/pre-auth", {
       state: {
         amount: plan.price,
-      }
+        customerId: user.customerId,
+      },
     });
-  }
+  };
   const plans = [
     {
       name: "Basic",
@@ -35,14 +37,16 @@ export default function Pricing() {
   return (
     <section id="pricing" className="py-16 bg-gray-50">
       <div className="container mx-auto text-center">
-        <h2 className="text-4xl font-bold mb-4">Pricing</h2>
+        <h2 className="text-4xl font-bold mb-4">Subscribe</h2>
         <p className="text-lg text-gray-600 mb-8">
           Choose the plan that fits your needs.
         </p>
 
         {/* Billing Toggle */}
         <div className="inline-flex items-center gap-2 mb-8">
-          <span className={billing === "monthly" ? "font-bold" : "text-gray-600"}>
+          <span
+            className={billing === "monthly" ? "font-bold" : "text-gray-600"}
+          >
             Monthly
           </span>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -57,7 +61,9 @@ export default function Pricing() {
             <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition"></div>
             <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full peer-checked:translate-x-full transition"></div>
           </label>
-          <span className={billing === "yearly" ? "font-bold" : "text-gray-600"}>
+          <span
+            className={billing === "yearly" ? "font-bold" : "text-gray-600"}
+          >
             Yearly
           </span>
         </div>
@@ -66,8 +72,9 @@ export default function Pricing() {
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`border rounded-lg p-8 text-left shadow-sm ${plan.popular ? "border-indigo-600 bg-white" : "bg-white"
-                }`}
+              className={`border rounded-lg p-8 text-left shadow-sm ${
+                plan.popular ? "border-indigo-600 bg-white" : "bg-white"
+              }`}
             >
               {plan.popular && (
                 <div className="text-indigo-600 font-semibold uppercase text-sm mb-2">
@@ -86,7 +93,8 @@ export default function Pricing() {
               </ul>
               <button
                 onClick={() => choosePlan(plan)}
-                className="mt-8 w-full py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800">
+                className="mt-8 w-full py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800"
+              >
                 {plan.name === "Free" ? "Get Started" : "Choose Plan"}
               </button>
             </div>
