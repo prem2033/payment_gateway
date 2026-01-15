@@ -33,7 +33,7 @@ export function ProductCard({ id, name, price, unit }) {
 
         <button
           onClick={handlePayment}
-          className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-700 transition"
+          className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-green-700 transition"
         >
           Purchase(1Months)
         </button>

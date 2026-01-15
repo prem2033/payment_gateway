@@ -36,6 +36,17 @@ export default function App() {
   const subscribe = () => {
     navigate("/pricing");
   };
+  const capturPayments = async () => {
+    console.log("Capturing pending payments for user:", user);
+    const customerRes = await axios.post(
+      "http://localhost:3000/capture-pre-auth",
+      {
+        customerId: user.customerId,
+        name: user.name,
+      }
+    );
+    console.log("Pending Payments Captured:", customerRes.data);
+  };
   const plans = [
     {
       id: "basic",
@@ -84,9 +95,17 @@ export default function App() {
               <div className="mt-6 flex justify-center">
                 <button
                   onClick={() => subscribe()}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-700 transition"
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-green-700 transition"
                 >
                   Subscribe
+                </button>
+              </div>
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => capturPayments()}
+                  className="rounded-lg bg-indigo-900 px-4 py-2 text-white font-medium hover:bg-green-700 transition"
+                >
+                  Get Pending Payments
                 </button>
               </div>
             </div>

@@ -12,6 +12,7 @@ export default function Pricing() {
       state: {
         amount: plan.price,
         customerId: user.customerId,
+        name: plan.name,
       },
     });
   };

@@ -54,6 +54,7 @@ export function PreAuthCard() {
         {
           customerId,
           amount: state.amount * 100,
+          description: `Pre-auth for ${state.name}`,
         }
       );
 

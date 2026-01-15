@@ -1,4 +1,4 @@
-import express, { json } from "express";
+import express from "express";
 import Stripe from "stripe";
 import dotenv from "dotenv";
 import cors from 'cors'
@@ -22,7 +22,7 @@ app.get("/", (req, res) => {
 
 app.get("/healthcheck", (req, res) => {
   console.log("Health check endpoint hit");
-  res.status(200).send({ status: "OK", timestamp: new Date()});
+  res.status(200).send({ status: "OK", timestamp: new Date() });
 });
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -30,17 +30,17 @@ const delay = ms => new Promise(res => setTimeout(res, ms));
 app.post('/checkout-session', async (req, res) => {
   console.log('checkout-session has started', req.body)
   const { name, email, unit, amount, customerId } = req.body;
-  if(!customerId){
-    return  res.status(400).json({ error: "customerId is required" });
+  if (!customerId) {
+    return res.status(400).json({ error: "customerId is required" });
   }
-  if(!amount || !unit){
-    return  res.status(400).json({ error: "amount and unit are required" });
+  if (!amount || !unit) {
+    return res.status(400).json({ error: "amount and unit are required" });
   }
-  if(!email){
-    return  res.status(400).json({ error: "email is required" });
+  if (!email) {
+    return res.status(400).json({ error: "email is required" });
   }
-  if(!name){
-    return  res.status(400).json({ error: "name is required" });
+  if (!name) {
+    return res.status(400).json({ error: "name is required" });
   }
   console.log('Creating checkout session for:', { name, email, unit, amount, customerId });
   // await delay(10000);
@@ -94,9 +94,13 @@ app.post("/refund-payment", async (req, res) => {
  */
 app.post("/pre-auth-amount", async (req, res) => {
   try {
-    const { customerId, amount } = req.body;
+    const { customerId, amount, description } = req.body;
+    if (!customerId || !amount || !description) {
+      return res.status(400).json({ error: "customerId, amount and description are required" });
+    }
     console.log('/pre-auth-amount', req.body)
     const paymentIntent = await stripe.paymentIntents.create({
+      description: description,
       amount, // pre-auth amount
       currency: "GBP",
       customer: customerId,
@@ -119,20 +123,42 @@ app.post("/pre-auth-amount", async (req, res) => {
 });
 
 
+/** it will capture the payment for the pre-auth */
 /**
  * CAPTURE (full or partial)
- * Path: /payment-pre-auth
+ * Path: /capture-pre-auth
  */
-app.post("/payment-pre-auth", async (req, res) => {
+app.post("/capture-pre-auth", async (req, res) => {
   try {
-    const { paymentIntentId, amountToCapture } = req.body;
+    const { customerId } = req.body;
+    if (!customerId) {
+      return res.status(400).json({ error: "customerId is required" });
+    }
+    // get payment intent to find customer
+    const paymentIntents = await stripe.paymentIntents.list({
+      customer: customerId,
+      limit: 100,
+    });
+    //get only requires_capture payment intents
+    const getCaptureIntent = paymentIntents?.data
+      ?.filter(pi => pi.status === 'requires_capture')
+      ?.map(pi => ({
+        id: pi.id,
+        client_secret: pi.client_secret,
+        paymentId: pi.latest_charge, // mapped paymentId
+        status: pi.status,
+      })) || [];
+    console.log(`Found ${getCaptureIntent.length} PaymentIntents requiring capture amoung ${paymentIntents.data.length} total for customer:`, customerId);
 
-    const paymentIntent = await stripe.paymentIntents.capture(
-      paymentIntentId,
-      { amountToCapture }
-    );
-
-    res.json(paymentIntent);
+    for (const pi of getCaptureIntent) {
+      const paymentIntent = await stripe.paymentIntents.capture(
+        pi.id,
+        // { amountToCapture }
+      );
+      console.log('Captured PaymentIntent', paymentIntent);
+    }
+    console.log('All pending payments captured for customer:', customerId);
+    res.status(200).json({ status: "success", capturedPayments: getCaptureIntent.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
