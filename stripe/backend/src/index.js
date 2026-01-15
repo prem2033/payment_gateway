@@ -251,6 +251,29 @@ app.post("/customer-session", async (req, res) => {
   });
 });
 
+app.post("/create-subscription", async (req, res) => {
+  const { customerId, priceId } = req.body;
+
+  const subscription = await stripe.subscriptions.create({
+    customer: customerId,
+    items: [{ price: priceId }],
+
+    payment_behavior: "default_incomplete",
+    payment_settings: {
+      save_default_payment_method: "on_subscription",
+    },
+
+    expand: ["latest_invoice.payment_intent"],
+  });
+
+  res.json({
+    subscriptionId: subscription.id,
+    clientSecret:
+      subscription.latest_invoice.payment_intent.client_secret,
+  });
+});
+
+
 /* ------------------ GLOBAL ERROR HANDLER ------------------ */
 app.use((err, _req, res, _next) => {
   console.error("Unhandled error:", err.message);

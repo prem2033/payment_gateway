@@ -10,6 +10,7 @@ import { stripePromise } from "./components/stripe";
 import { PreAuthCard } from "./components/PreAuthCard";
 import { getUser } from "./data/User";
 import axios from "axios";
+import { PendingPaymentsButton } from "./components/PendingPaymentsButton";
 export const UserContext = createContext(null);
 
 export default function App() {
@@ -78,7 +79,7 @@ export default function App() {
           path="/"
           element={
             <div>
-              <h2 className="flex justify-center text-blue-600/100">
+              <h2 className="text-center text-2xl font-medium text-gray-900">
                 Welcome to the Stripe Plans
               </h2>
               <div className="gap-6 flex items-center justify-center">
@@ -108,6 +109,7 @@ export default function App() {
                   Get Pending Payments
                 </button>
               </div>
+              <PendingPaymentsButton />
             </div>
           }
         />
