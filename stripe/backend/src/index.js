@@ -274,6 +274,76 @@ app.post("/create-subscription", async (req, res) => {
 });
 
 
+app.post("/stripe/save-card", async (req, res) => {
+  try {
+    console.log('creating intent to save card')
+    const { customerId } = req.body;
+    if (!customerId) {
+      res.status(400).json({ "missing": "customerId can't be null or undefined" });
+    }
+
+    const setupIntent = await stripe.setupIntents.create({
+      customer: customerId,
+      payment_method_types: ["card"],
+      usage: "off_session",
+    });
+
+    res.json({
+      clientSecret: setupIntent.client_secret,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+/**Reterive saved card for any specific customer */
+app.get("/stripe/cards/:customerId", async (req, res) => {
+  try {
+    const { customerId } = req.params;
+
+    if (!customerId) {
+      res.status(400).json({ "missing": "customerId can't be null or undefind" });
+    }
+    const paymentMethods = await stripe.paymentMethods.list({
+      customer: customerId,
+      type: "card",
+    });
+
+    const cards = paymentMethods.data.map(pm => ({
+      paymentMethodId: pm.id,
+      brand: pm.card.brand,
+      last4: pm.card.last4,
+      expMonth: pm.card.exp_month,
+      expYear: pm.card.exp_year,
+      funding: pm.card.funding,
+    }));
+
+    res.json(cards);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/stripe/cards/:paymentMethodId", async (req, res) => {
+  try {
+    const { paymentMethodId } = req.params;
+
+    if (!paymentMethodId) {
+      res.status(400).json({ "missing": "paymentMethodId can't be null or undefind" });
+    }
+
+    await stripe.paymentMethods.detach(paymentMethodId);
+
+    res.json({
+      status: "card_removed",
+      paymentMethodId,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* ------------------ GLOBAL ERROR HANDLER ------------------ */
 app.use((err, _req, res, _next) => {
   console.error("Unhandled error:", err.message);
